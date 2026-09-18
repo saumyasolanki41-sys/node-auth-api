@@ -1,10 +1,11 @@
 const express = require("express");
-
+const { requireAuth } = require("../middleware/auth.middleware");
 const {
   signup,
   verifyOtp,
   resendOtp,
   login,
+  getMe,
 } = require("../controllers/auth.controller");
 
 const {
@@ -49,6 +50,12 @@ router.post(
   loginLimiter,
   validateLogin,
   login
+);
+
+router.get(
+  "/me",
+  requireAuth,
+  getMe
 );
 
 module.exports = router;

@@ -303,10 +303,27 @@ const resendOtp = async (req, res, next) => {
     next(error);
   }
 };
+const getMe = (req, res) => {
+  res.set("Cache-Control", "no-store");
 
+  return res.status(200).json({
+    success: true,
+    message: "Profile fetched successfully",
+    data: {
+      user: {
+        id: req.user._id,
+        name: req.user.name,
+        email: req.user.email,
+        isVerified: req.user.isVerified,
+        createdAt: req.user.createdAt,
+      },
+    },
+  });
+};
 module.exports = {
     signup,
     verifyOtp,
     resendOtp,
     login,
+    getMe,
    };
