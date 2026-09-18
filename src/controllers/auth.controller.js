@@ -1,5 +1,9 @@
+const { generateAccessToken } = require("../utils/token");
 const User = require("../models/User");
-const { hashPassword } = require("../utils/password");
+const {
+   hashPassword,
+   comparePassword,
+   } = require("../utils/password");
 const {
   generateOtp,
   hashOtp,
@@ -158,7 +162,151 @@ const verifyOtp = async (req, res, next) => {
   }
 };
 
+const login = async (req, res, next) => {
+  try {
+    const { email, password } = req.loginData;
+
+    const user = await User.findOne({ email })
+      .select("+passwordHash");
+
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid email or password",
+      });
+    }
+
+    const isPasswordCorrect = await comparePassword(
+      password,
+      user.passwordHash
+    );
+
+    if (!isPasswordCorrect) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid email or password",
+      });
+    }
+
+    if (!user.isVerified) {
+      return res.status(403).json({
+        success: false,
+        message: "Please verify your email before logging in",
+      });
+    }
+
+    const accessToken = generateAccessToken(user._id);
+
+    res.set("Cache-Control", "no-store");
+
+    return res.status(200).json({
+      success: true,
+      message: "Login successful",
+      data: {
+        accessToken,
+        tokenType: "Bearer",
+        expiresIn: 3600,
+        user: {
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          isVerified: user.isVerified,
+        },
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const resendOtp = async (req, res, next) => {
+  try {
+    const { email } = req.resendOtpData;
+
+    const now = new Date();
+    const cooldownCutoff = new Date(now.getTime() - 60 * 1000);
+
+    const otp = generateOtp();
+    const otpHash = hashOtp(email, otp);
+
+    
+    const user = await User.findOneAndUpdate(
+      {
+        email,
+        isVerified: false,
+        $or: [
+          { otpLastSentAt: null },
+          { otpLastSentAt: { $lte: cooldownCutoff } },
+        ],
+      },
+      {
+        $set: {
+          otpHash,
+          otpExpiresAt: new Date(now.getTime() + OTP_EXPIRY_MS),
+          otpAttempts: 0,
+          otpLastSentAt: now,
+        },
+      },
+      {
+        returnDocument: "after",
+        runValidators: true,
+      }
+    );
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "OTP cannot be resent. Use a pending account and wait at least 60 seconds after the previous request.",
+      });
+    }
+
+    try {
+      await sendOtpEmail(email, otp);
+    } catch (mailError) {
+    
+      await User.updateOne(
+        {
+          _id: user._id,
+          isVerified: false,
+          otpHash,
+          otpLastSentAt: now,
+        },
+        {
+          $set: {
+            otpHash: null,
+            otpExpiresAt: null,
+          },
+        }
+      );
+
+      console.error(
+        "Resend email failed:",
+        mailError.code || "SMTP_ERROR"
+      );
+
+      return res.status(503).json({
+        success: false,
+        message:
+          "Could not send OTP. Please wait 60 seconds and try again.",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "A new verification OTP has been emailed.",
+      data: {
+        email: user.email,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
     signup,
     verifyOtp,
+    resendOtp,
+    login,
    };

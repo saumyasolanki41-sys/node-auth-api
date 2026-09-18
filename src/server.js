@@ -13,6 +13,7 @@ const startServer = async () => {
       "GMAIL_USER",
       "GMAIL_APP_PASSWORD",
       "OTP_SECRET",
+      "JWT_SECRET",
     ];
 
     for (const variable of requiredVariables) {
@@ -24,6 +25,12 @@ const startServer = async () => {
     if (!/^[a-f0-9]{64}$/i.test(process.env.OTP_SECRET)) {
       throw new Error("OTP_SECRET must be a generated 64-character hex string");
     }
+
+    if (!/^[a-f0-9]{64}$/i.test(process.env.JWT_SECRET)) {
+  throw new Error(
+    "JWT_SECRET must be a generated 64-character hex string"
+  );
+}
 
     await connectDB();
     await User.init();

@@ -111,7 +111,89 @@ const validateVerifyOtp = (req, res, next) => {
   next();
 };
 
+const validateLogin = (req, res, next) => {
+  const body = req.body;
+
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    return res.status(400).json({
+      success: false,
+      message: "Request body must be a JSON object",
+    });
+  }
+
+  const { email, password } = body;
+
+  if (typeof email !== "string" || typeof password !== "string") {
+    return res.status(400).json({
+      success: false,
+      message: "Email and password must be strings",
+    });
+  }
+
+  const cleanEmail = email.trim().toLowerCase();
+  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  if (cleanEmail.length > 254 || !emailPattern.test(cleanEmail)) {
+    return res.status(400).json({
+      success: false,
+      message: "Please provide a valid email address",
+    });
+  }
+
+  if (
+    password.length === 0 ||
+    Buffer.byteLength(password, "utf8") > 72
+  ) {
+    return res.status(400).json({
+      success: false,
+      message: "Password must be provided and must not exceed 72 bytes",
+    });
+  }
+
+  req.loginData = {
+    email: cleanEmail,
+    password,
+  };
+
+  next();
+};
+
+
+const validateResendOtp = (req, res, next) => {
+  const body = req.body;
+
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    return res.status(400).json({
+      success: false,
+      message: "Request body must be a JSON object",
+    });
+  }
+
+  if (typeof body.email !== "string") {
+    return res.status(400).json({
+      success: false,
+      message: "Email must be a string",
+    });
+  }
+
+  const email = body.email.trim().toLowerCase();
+  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  if (email.length > 254 || !emailPattern.test(email)) {
+    return res.status(400).json({
+      success: false,
+      message: "Please provide a valid email address",
+    });
+  }
+
+  req.resendOtpData = { email };
+
+  next();
+};
+
 module.exports = {
   validateSignup,
   validateVerifyOtp,
+  validateResendOtp,
+   validateLogin,
 };

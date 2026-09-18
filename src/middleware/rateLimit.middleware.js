@@ -25,7 +25,32 @@ const verifyOtpLimiter = rateLimit({
   },
 });
 
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+
+  message: {
+    success: false,
+    message: "Too many login requests. Please try again after 15 minutes.",
+  },
+});
+
+const resendOtpLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: 5,
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+
+  message: {
+    success: false,
+    message: "Too many resend requests. Please try again after one hour.",
+  },
+});
 module.exports = { 
      signupLimiter,
      verifyOtpLimiter,
+     resendOtpLimiter,
+     loginLimiter,
  };
