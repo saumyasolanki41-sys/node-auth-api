@@ -1,9 +1,18 @@
 const express = require("express");
 
-const { signup } = require("../controllers/auth.controller");
-const { validateSignup } = require("../validators/auth.validator");
+const {
+  signup,
+  verifyOtp,
+} = require("../controllers/auth.controller");
+
+const {
+  validateSignup,
+  validateVerifyOtp,
+} = require("../validators/auth.validator");
+
 const {
   signupLimiter,
+  verifyOtpLimiter,
 } = require("../middleware/rateLimit.middleware");
 
 const router = express.Router();
@@ -13,6 +22,13 @@ router.post(
   signupLimiter,
   validateSignup,
   signup
+);
+
+router.post(
+  "/verify-otp",
+  verifyOtpLimiter,
+  validateVerifyOtp,
+  verifyOtp
 );
 
 module.exports = router;
